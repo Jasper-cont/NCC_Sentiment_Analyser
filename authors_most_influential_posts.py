@@ -1,12 +1,46 @@
 import praw
 import json
 from secrets import secrets
-import nltk
+# import nltk
 import pprint
-from nltk.sentiment import SentimentIntensityAnalyzer
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from praw.models import MoreComments
 import regex as re
 # from top_level_load import TopLvlComments
+
+
+def split_sentences(text, sia):
+    pattern = r"\.|\n"
+    result_sentences = re.split(pattern, text)
+
+    #Remove this line out when built into main function
+    sia = SentimentIntensityAnalyzer()
+    sentences_scores_list = []
+    for sentence in result_sentences:
+
+        # Analyze the sentiment of the sentence
+        sentiment_scores = sia.polarity_scores(sentence)
+
+        if -0.05 > sentiment_scores['compound'] or sentiment_scores['compound'] > 0.05:
+            sentences_scores_list.append(sentiment_scores)
+
+    return sentences_scores_list
+
+
+def calculate_average_scores(score_list):
+    added_scores = {'neg': 0, 'neu': 0, 'pos': 0, 'compound': 0}
+
+    for score in score_list:
+        added_scores['neg'] += score['neg']
+        added_scores['neu'] += score['neu']
+        added_scores['pos'] += score['pos']
+        added_scores['compound'] += score['compound']
+
+    added_scores['neg'] = round(added_scores['neg'] / len(score_list), 3)
+    added_scores['neu'] = round(added_scores['neu'] / len(score_list), 3)
+    added_scores['pos'] = round(added_scores['pos'] / len(score_list), 3)
+    added_scores['compound'] = round(added_scores['compound'] / len(score_list), 3)
+    return added_scores
 
 
 def iter_top_level(comments):
@@ -38,18 +72,18 @@ def get_top_posts_by_authors(reddit, authors_sorted, post_limit_per_author):
                     if len(post.selftext) < 1:
                         continue
                     tickers_found_1 = re.findall(ticker_pattern[0], post.selftext)
-                    tickers_found_2 = re.findall(ticker_pattern[1], post.selftext)
+                    # tickers_found_2 = re.findall(ticker_pattern[1], post.selftext)
                     if len(tickers_found_1) > 0:
-                        print("Here1")
+                        # print("Here1")
                         for ticker in tickers_found_1:
                             if ticker.upper().replace('$', '') in company_tickers:
                                 valid_tickers.append(ticker)
                         
-                    if len(tickers_found_2) > 0:
-                        print("Here2")
-                        for ticker in tickers_found_2:
-                            if ticker.upper() in company_tickers:
-                                valid_tickers.append(ticker)
+                    # if len(tickers_found_2) > 0:
+                    #     print("Here2")
+                    #     for ticker in tickers_found_2:
+                    #         if ticker.upper() in company_tickers:
+                    #             valid_tickers.append(ticker)
                     
                     if len(valid_tickers) > 0:
                         post_comments = iter_top_level(post.comments)
@@ -93,10 +127,11 @@ if __name__ == "__main__":
     top_posts = get_top_posts_by_authors(reddit, historical_redditors, 1)
 
     # Sentiment Analyse the top posts
+
     # nltk.download([
-    #         "vader_lexicon",
-    #         "stopwords"
+    #         "vader_lexicon"
     #     ])
+
     # text = """
     # For some quick analysis, creating a corpus could be overkill.
     # If all you need is a word list,
@@ -112,32 +147,49 @@ if __name__ == "__main__":
         '''
         For better accuracy I want to setup VADER to rate individual sentences instead of full posts (or comments)
         '''
-        comments_added_scores = {'neg': 0, 'neu': 0, 'pos': 0, 'compound': 0}
-        comments_scores_list = []
+        # comments_added_scores = {'neg': 0, 'neu': 0, 'pos': 0, 'compound': 0}
+        # comments_scores_list = []
         print(f"Title: {title}, Title Score: {sia.polarity_scores(title)}, Tickers: {ticker}")
         
+
         print(f"Content: {content}, Score: {sia.polarity_scores(content)}")
 
-        for comment in comments:
-            comment_score = sia.polarity_scores(comment.body)
-            if comment_score['neu'] > 0.7:
-                continue
-            else:
-                comments_scores_list.append(sia.polarity_scores(comment.body))
+        # for comment in comments:
+        #     comment_score = sia.polarity_scores(comment.body)
+        #     if comment_score['neu'] > 0.2:
+        #         continue
+        #     else:
+        #         comments_scores_list.append(sia.polarity_scores(comment.body))
                 # comments_added_scores['neg'] = round((comments_added_scores['neg'] + comment_score['neg'])/(index + 2), 3)
                 # comments_added_scores['neu'] = round((comments_added_scores['neu'] + comment_score['neu'])/(index + 2), 3)
                 # comments_added_scores['pos'] = round((comments_added_scores['pos'] + comment_score['pos'])/(index + 2), 3)
                 # comments_added_scores['compound'] = round((comments_added_scores['compound'] + comment_score['compound'])/(index + 2), 3)
             # print(f"Comment: {comment.body}, score: {comment_score}")
 
-        for score in comments_scores_list:
-            comments_added_scores['neg'] += score['neg']
-            comments_added_scores['neu'] += score['neu']
-            comments_added_scores['pos'] += score['pos']
-            comments_added_scores['compound'] += score['compound']
+        # for score in comments_scores_list:
+        #     comments_added_scores['neg'] += score['neg']
+        #     comments_added_scores['neu'] += score['neu']
+        #     comments_added_scores['pos'] += score['pos']
+        #     comments_added_scores['compound'] += score['compound']
 
-        comments_added_scores['neg'] = comments_added_scores['neg'] / len(comments_scores_list)
-        comments_added_scores['neu'] = comments_added_scores['neu'] / len(comments_scores_list)
-        comments_added_scores['pos'] = comments_added_scores['pos'] / len(comments_scores_list)
-        comments_added_scores['compound'] = comments_added_scores['compound'] / len(comments_scores_list)
-        print(comments_added_scores)
+        # comments_added_scores['neg'] = round(comments_added_scores['neg'] / len(comments_scores_list), 3)
+        # comments_added_scores['neu'] = round(comments_added_scores['neu'] / len(comments_scores_list), 3)
+        # comments_added_scores['pos'] = round(comments_added_scores['pos'] / len(comments_scores_list), 3)
+        # comments_added_scores['compound'] = round(comments_added_scores['compound'] / len(comments_scores_list), 3)
+        # print(comments_added_scores)
+
+        score_list = split_sentences(content, sia)
+
+        added_scores = calculate_average_scores(score_list)
+
+        comment_scores = []
+        for comment in comments:
+            if len(comment.body) > 0:
+                comment_score_list = split_sentences(comment.body, sia)
+                comment_added_scores = calculate_average_scores(comment_score_list)
+                comment_scores.append(comment_added_scores)
+        average_comment_score = calculate_average_scores(comment_scores)
+
+        print(f"Content score: {added_scores}")
+        print(f"Comment scores: {comment_scores}")
+        print(f"Average comment score: {average_comment_score}")
