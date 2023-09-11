@@ -8,6 +8,7 @@ from praw.models import MoreComments
 import regex as re
 # from top_level_load import TopLvlComments
 
+
 def iter_top_level(comments):
     more_comments = []
     for top_level_comment in comments:
@@ -20,8 +21,8 @@ def iter_top_level(comments):
 
 def get_top_posts_by_authors(reddit, authors_sorted, post_limit_per_author):
     top_posts = []
-    ticker_pattern = r'\b[$]?[A-Z0-9]{2,}\b'
-    tickers_found = []
+    ticker_pattern = [r'(\$[A-Za-z0-9]{3,6})',r'\b[A-Z]{3,5}\b']
+    valid_tickers = []
     for subreddit in authors_sorted.keys():
         for author in authors_sorted[str(subreddit)].keys():
             try:
@@ -34,23 +35,27 @@ def get_top_posts_by_authors(reddit, authors_sorted, post_limit_per_author):
 
                 # Append each post to the list and extract the top level comments
                 for post in author_top_posts:
-                    print("0")
-                    tickers_found = re.findall(ticker_pattern, post.selftext)
-                    if len(tickers_found) > 0:
-                        print("1")
-                        if tickers_found[0] in company_tickers:
-                            print("2")
-                            post_comments = iter_top_level(post.comments)
-                            print("3")
-                            top_posts.append((author, post.title, post.selftext, post_comments, post.score, tickers_found[0]))
-                            print("4")
-
-                    else: 
-                        print("1")
+                    if len(post.selftext) < 1:
+                        continue
+                    tickers_found_1 = re.findall(ticker_pattern[0], post.selftext)
+                    tickers_found_2 = re.findall(ticker_pattern[1], post.selftext)
+                    if len(tickers_found_1) > 0:
+                        print("Here1")
+                        for ticker in tickers_found_1:
+                            if ticker.upper().replace('$', '') in company_tickers:
+                                valid_tickers.append(ticker)
+                        
+                    if len(tickers_found_2) > 0:
+                        print("Here2")
+                        for ticker in tickers_found_2:
+                            if ticker.upper() in company_tickers:
+                                valid_tickers.append(ticker)
+                    
+                    if len(valid_tickers) > 0:
                         post_comments = iter_top_level(post.comments)
-                        print("2")
-                        top_posts.append((author, post.title, post.selftext, post_comments, post.score, False))
-                        print("3")
+                        top_posts.append((author, post.title, post.selftext, post_comments, post.score, list(set(valid_tickers))))
+                    
+                    valid_tickers = []
 
             except Exception as e:
                 print(f"Failed to get posts for author {author}: {str(e)}")
@@ -107,6 +112,32 @@ if __name__ == "__main__":
         '''
         For better accuracy I want to setup VADER to rate individual sentences instead of full posts (or comments)
         '''
-        print(len(content))
-        print(comments[0].body)
-        print(f"Title: {title}, Title Score: {sia.polarity_scores(title)}, Body Score: {sia.polarity_scores(content)}, First comment Score: {sia.polarity_scores(comments[0].body)}, Ticker: {ticker}")
+        comments_added_scores = {'neg': 0, 'neu': 0, 'pos': 0, 'compound': 0}
+        comments_scores_list = []
+        print(f"Title: {title}, Title Score: {sia.polarity_scores(title)}, Tickers: {ticker}")
+        
+        print(f"Content: {content}, Score: {sia.polarity_scores(content)}")
+
+        for comment in comments:
+            comment_score = sia.polarity_scores(comment.body)
+            if comment_score['neu'] > 0.7:
+                continue
+            else:
+                comments_scores_list.append(sia.polarity_scores(comment.body))
+                # comments_added_scores['neg'] = round((comments_added_scores['neg'] + comment_score['neg'])/(index + 2), 3)
+                # comments_added_scores['neu'] = round((comments_added_scores['neu'] + comment_score['neu'])/(index + 2), 3)
+                # comments_added_scores['pos'] = round((comments_added_scores['pos'] + comment_score['pos'])/(index + 2), 3)
+                # comments_added_scores['compound'] = round((comments_added_scores['compound'] + comment_score['compound'])/(index + 2), 3)
+            # print(f"Comment: {comment.body}, score: {comment_score}")
+
+        for score in comments_scores_list:
+            comments_added_scores['neg'] += score['neg']
+            comments_added_scores['neu'] += score['neu']
+            comments_added_scores['pos'] += score['pos']
+            comments_added_scores['compound'] += score['compound']
+
+        comments_added_scores['neg'] = comments_added_scores['neg'] / len(comments_scores_list)
+        comments_added_scores['neu'] = comments_added_scores['neu'] / len(comments_scores_list)
+        comments_added_scores['pos'] = comments_added_scores['pos'] / len(comments_scores_list)
+        comments_added_scores['compound'] = comments_added_scores['compound'] / len(comments_scores_list)
+        print(comments_added_scores)

@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
     # Specify the subreddit you want to pull posts from
     subreddit_names = ["Stockmarket", "pennystocks", "EducatedInvesting", "wallstreetbets"]
-    post_limit = 1
+    post_limit = 20
     author_karma, errors = ExtractRedditorsKarma(subreddit_names, post_limit, reddit)
 
     with open('candidate_redditors.json', 'r') as f:
