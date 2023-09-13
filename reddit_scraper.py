@@ -7,7 +7,7 @@ from secrets import secrets
 
 def ExtractRedditorsKarma(subreddit_names, post_limit, reddit):
     author_karma = {}
-    sorted_authors = {}
+
     for subr in subreddit_names:
 
         author_karma[subr] = {}
@@ -44,14 +44,9 @@ def ExtractRedditorsKarma(subreddit_names, post_limit, reddit):
                     except:
                         no_comment_karma_count += 1
 
-        # sorted_authors[subr] = {k: v for k, v in sorted(author_karma[subr].items(), key=lambda x: x[1], reverse=True)}
-        sorted_authors[subr] = sorted(author_karma[subr].items(), key=lambda x: x[1], reverse=True)
-        # sorted_authors[subr] = temp_sorted_authors
-        # sorted_authors[subr] = d for couple in temp_sorted_authors: d[couple(0)] = couple(1)
-        # pprint.pprint(author_karma)
         errors = f"{subr}: No link Karma count: {no_link_karma_count}, No comment Karma count: {no_comment_karma_count}"
-    # pprint.pprint(sorted_authors)
-    return sorted_authors, errors
+
+    return author_karma, errors
 
             # author_data = reddit.redditor(author.name)
             # author_karma = 0
@@ -79,9 +74,9 @@ if __name__ == '__main__':
 
     # Specify the subreddit you want to pull posts from
     subreddit_names = ["Stockmarket", "pennystocks", "EducatedInvesting", "wallstreetbets"]
-    post_limit = 10
-    sorted_authors, errors = ExtractRedditorsKarma(subreddit_names, post_limit, reddit)
-    print(type(sorted_authors))
+    post_limit = 20
+    author_karma, errors = ExtractRedditorsKarma(subreddit_names, post_limit, reddit)
+
     with open('candidate_redditors.json', 'r') as f:
         historical_redditors = f.read()
 
@@ -90,16 +85,15 @@ if __name__ == '__main__':
     else:
         historical_redditors = json.loads(historical_redditors)
 
-    for k in sorted_authors.keys():
-        if k in historical_redditors.keys():
-            historical_redditors[k].append(list(sorted_authors[k][0]))
-        else:
-            historical_redditors[k] = list(sorted_authors[k][0])
-        historical_redditors[k].sort()
-        historical_redditors[k] = list(historical_redditors[k] for historical_redditors[k],_ in itertools.groupby(historical_redditors[k]))
-    
+    for subr_key in author_karma.keys():
+        if subr_key not in historical_redditors.keys():
+            historical_redditors[subr_key] = {}
 
-    pprint.pprint(historical_redditors)
+        for author_key in author_karma[subr_key].keys():
+            if int(author_karma[subr_key][author_key]) > 1000:
+                historical_redditors[subr_key][author_key] = author_karma[subr_key][author_key]
+
+    # pprint.pprint(historical_redditors)
 
     with open('candidate_redditors.json', 'w') as f:
         f.write(json.dumps(historical_redditors))
