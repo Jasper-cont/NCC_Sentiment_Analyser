@@ -5,7 +5,7 @@ import itertools
 from secrets import secrets
 
 
-def ExtractRedditorsKarma(subreddit_names, post_limit, reddit):
+def extractRedditorsKarma(subreddit_names, post_limit, reddit):
     author_karma = {}
 
     for subr in subreddit_names:
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     # Specify the subreddit you want to pull posts from
     subreddit_names = ["Stockmarket", "pennystocks", "EducatedInvesting", "wallstreetbets"]
     post_limit = 20
-    author_karma, errors = ExtractRedditorsKarma(subreddit_names, post_limit, reddit)
+    author_karma, errors = extractRedditorsKarma(subreddit_names, post_limit, reddit)
 
     with open('candidate_redditors.json', 'r') as f:
         historical_redditors = f.read()
