@@ -1,10 +1,20 @@
 import praw
 import json
-from secrets import secrets
+from secretsj import secretsj
 import pprint
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 from praw.models import MoreComments
 import regex as re
+import datetime
+import pytz
+
+
+def get_x_days_ago(x):
+    # Get the current date and time
+    current_datetime = datetime.datetime.now()
+    # Calculate the datetime x days ago
+    x_days_ago = current_datetime - datetime.timedelta(days=x)
+    return x_days_ago
 
 
 def split_sentences(text, sia):
@@ -12,7 +22,6 @@ def split_sentences(text, sia):
     result_sentences = re.split(pattern, text)
 
     #Remove this line out when built into main function
-    sia = SentimentIntensityAnalyzer()
     sentences_scores_list = []
     for sentence in result_sentences:
 
@@ -55,8 +64,8 @@ def iter_top_level(comments):
     return more_comments
 
 
-def get_top_posts_by_authors(reddit, authors_sorted, post_limit_per_author):
-    top_posts = []
+def get_hot_posts_by_authors(reddit, authors_sorted, post_limit_per_author):
+    hot_posts = []
     ticker_pattern = [r'(\$[A-Za-z0-9]{3,6})',r'\b[A-Z]{3,5}\b']
     valid_tickers = []
     for subreddit in authors_sorted.keys():
@@ -66,11 +75,16 @@ def get_top_posts_by_authors(reddit, authors_sorted, post_limit_per_author):
                 print('author: ', author)
                 redditor = reddit.redditor(author)
 
-                # Get the top posts by this author
-                author_top_posts = redditor.submissions.top(limit=post_limit_per_author)
+                # Get the hottest posts by this author
+                author_hot_posts = redditor.submissions.hot(limit=post_limit_per_author)
 
                 # Append each post to the list and extract the top level comments
-                for post in author_top_posts:
+                for post in author_hot_posts:
+                    post_time = datetime.datetime.fromtimestamp(post.created)
+                    time_delta = get_x_days_ago(100)
+                    if (post_time < time_delta):
+                        continue
+                    # print(f"====================\n\n\n\n\n\n Post Time: {post_time},\n\n Time Delta: {time_delta}\n\n\n\n\n\n\n\n=====================")
                     if len(post.selftext) < 1:
                         continue
                     tickers_found_1 = re.findall(ticker_pattern[0], post.selftext)
@@ -89,7 +103,7 @@ def get_top_posts_by_authors(reddit, authors_sorted, post_limit_per_author):
                     
                     if len(valid_tickers) > 0:
                         post_comments = iter_top_level(post.comments)
-                        top_posts.append((author, post.title, post.selftext, post_comments, post.score, list(set(valid_tickers))))
+                        hot_posts.append((author, post.title, post.selftext, post_comments, post.score, list(set(valid_tickers))))
                     
                     valid_tickers = []
 
@@ -97,9 +111,9 @@ def get_top_posts_by_authors(reddit, authors_sorted, post_limit_per_author):
                 print(f"Failed to get posts for author {author}: {str(e)}")
 
     # Sort the posts by score in descending order
-    top_posts.sort(key=lambda x: x[2], reverse=True)
+    hot_posts.sort(key=lambda x: x[2], reverse=True)
 
-    return top_posts
+    return hot_posts
 
 
 if __name__ == "__main__":
@@ -115,7 +129,7 @@ if __name__ == "__main__":
         company_tickers = json.loads(f.read())
 
     # Create a Reddit instance
-    reddit_s = secrets()
+    reddit_s = secretsj()
     sec_dict = reddit_s.reddit_secrets()
     reddit = praw.Reddit(
         client_id=sec_dict["CLIENT_ID"],
@@ -126,9 +140,9 @@ if __name__ == "__main__":
     )
 
     # Use the function
-    top_posts = get_top_posts_by_authors(reddit, historical_redditors, 1)
+    hot_posts = get_hot_posts_by_authors(reddit, historical_redditors, 1)
 
-    # Sentiment Analyse the top posts
+    # Sentiment Analyse the hottest posts
 
     # nltk.download([
     #         "vader_lexicon"
@@ -143,7 +157,7 @@ if __name__ == "__main__":
     # pprint.pprint(tokenised_text)
     sia = SentimentIntensityAnalyzer()
 
-    for index, (author, title, content, comments, score, ticker) in enumerate(top_posts):
+    for index, (author, title, content, comments, score, ticker) in enumerate(hot_posts):
         # pprint.pprint(f"Index: {index}, Author: {author}, Post Title: {title}, Post Score: {score}, Content: {content}")
         
         '''
