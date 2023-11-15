@@ -23,11 +23,20 @@ def calculate_put_call_ratio(options_data, options):
     return p_c_r_data
 
 
-def calculate_open_interest(options_data):
+# def calculate_open_interest(options_data, options):
     temp_data = {
         'expirationDate' : [],
         'open interest': []
     }
+
+    for expiry_date in options:
+        temp_data['expirationDate'].append(expiry_date)
+        open_interest = options_data[(options_data['expirationDate'] == expiry_date)]['openInterest'].sum()
+        temp_data['open interest'].append( open_interest )
+
+    open_interest_data = pd.DataFrame(temp_data)
+
+    return open_interest_data
 
 # Define the ticker symbol of the stock
 ticker_symbol = 'EOSE'
@@ -65,3 +74,12 @@ print(options_data.head())
 put_call_ratio_data = calculate_put_call_ratio(options_data, options)
 
 print(put_call_ratio_data)
+
+# open_interest = calculate_open_interest(options_data, options)
+open_interest = options_data.groupby('expirationDate')['openInterest'].sum().reset_index()
+
+print(open_interest)
+
+average_iv_by_date = options_data.groupby('expirationDate')['impliedVolatility'].mean().reset_index()
+
+print(average_iv_by_date)
