@@ -2,7 +2,7 @@ import praw
 import json
 import pprint
 import itertools
-from secrets import secrets
+from secretsj import secretsj
 
 
 def ExtractRedditorsKarma(subreddit_names, post_limit, reddit):
@@ -60,7 +60,7 @@ def ExtractRedditorsKarma(subreddit_names, post_limit, reddit):
 
 
 if __name__ == '__main__':
-    reddit_s = secrets()
+    reddit_s = secretsj()
     sec_dict = reddit_s.reddit_secrets()
 
     # Create a Reddit instance
